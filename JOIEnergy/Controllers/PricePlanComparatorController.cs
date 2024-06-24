@@ -19,42 +19,43 @@ namespace JOIEnergy.Controllers
 
         public PricePlanComparatorController(IPricePlanService pricePlanService, IAccountService accountService)
         {
-            this._pricePlanService = pricePlanService;
-            this._accountService = accountService;
+            _pricePlanService = pricePlanService;
+            _accountService = accountService;
         }
 
         [HttpGet("compare-all/{smartMeterId}")]
-        public ObjectResult CalculatedCostForEachPricePlan(string smartMeterId)
+        public IActionResult CalculatedCostForEachPricePlan(string smartMeterId)
         {
             string pricePlanId = _accountService.GetPricePlanIdForSmartMeterId(smartMeterId);
             Dictionary<string, decimal> costPerPricePlan = _pricePlanService.GetConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
-            if (!costPerPricePlan.Any())
+            
+            if (costPerPricePlan.Count == 0)
             {
-                return new NotFoundObjectResult(string.Format("Smart Meter ID ({0}) not found", smartMeterId));
+                return NotFound(string.Format("Smart Meter ID ({0}) not found", smartMeterId));
             }
 
-            return new ObjectResult(new Dictionary<string, object>() {
+            return Ok(new Dictionary<string, object>() {
                 {PRICE_PLAN_ID_KEY, pricePlanId},
                 {PRICE_PLAN_COMPARISONS_KEY, costPerPricePlan},
             });
         }
 
         [HttpGet("recommend/{smartMeterId}")]
-        public ObjectResult RecommendCheapestPricePlans(string smartMeterId, int? limit = null) {
+        public IActionResult RecommendCheapestPricePlans(string smartMeterId, int? limit = null) {
             var consumptionForPricePlans = _pricePlanService.GetConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
 
-            if (!consumptionForPricePlans.Any()) {
-                return new NotFoundObjectResult(string.Format("Smart Meter ID ({0}) not found", smartMeterId));
+            if (consumptionForPricePlans.Count == 0) {
+                return NotFound(string.Format("Smart Meter ID ({0}) not found", smartMeterId));
             }
 
             var recommendations = consumptionForPricePlans.OrderBy(pricePlanComparison => pricePlanComparison.Value);
 
             if (limit.HasValue && limit.Value < recommendations.Count())
             {
-                return new ObjectResult(recommendations.Take(limit.Value));
+                return Ok(recommendations.Take(limit.Value));
             }
 
-            return new ObjectResult(recommendations);
+            return Ok(recommendations);
         }
     }
 }

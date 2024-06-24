@@ -8,6 +8,7 @@ using System.Linq;
 using Xunit;
 using Newtonsoft.Json.Linq;
 using System.Collections;
+using Microsoft.AspNetCore.Mvc;
 
 namespace JOIEnergy.Tests
 {
@@ -42,33 +43,44 @@ namespace JOIEnergy.Tests
         [Fact]
         public void ShouldCalculateCostForMeterReadingsForEveryPricePlan()
         {
+            // Arrange
             var electricityReading = new ElectricityReading() { Time = DateTime.Now.AddHours(-1), Reading = 15.0m };
             var otherReading = new ElectricityReading() { Time = DateTime.Now, Reading = 5.0m };
             meterReadingService.StoreReadings(SMART_METER_ID, new List<ElectricityReading>() { electricityReading, otherReading });
 
-            Dictionary<string, object> result = controller.CalculatedCostForEachPricePlan(SMART_METER_ID).Value as Dictionary<string, object>;
+            // Act
+            var response = controller.CalculatedCostForEachPricePlan(SMART_METER_ID);
+            
+            // Assert
+            var result = Assert.IsAssignableFrom<OkObjectResult>(response);
+            var resultValue = result.Value as Dictionary<string, object>;
 
             Assert.NotNull(result);
-            Assert.Equal(PRICE_PLAN_1_ID, result[PricePlanComparatorController.PRICE_PLAN_ID_KEY]);
+            Assert.Equal(PRICE_PLAN_1_ID, resultValue[PricePlanComparatorController.PRICE_PLAN_ID_KEY]);
             var expected = new Dictionary<string, decimal>() {
                 { PRICE_PLAN_1_ID, 100m },
                 { PRICE_PLAN_2_ID, 10m },
                 { PRICE_PLAN_3_ID, 20m },
             };
-            Assert.Equal(expected, result[PricePlanComparatorController.PRICE_PLAN_COMPARISONS_KEY]);
+            Assert.Equal(expected, resultValue[PricePlanComparatorController.PRICE_PLAN_COMPARISONS_KEY]);
         }
 
         [Fact]
         public void ShouldRecommendCheapestPricePlansNoLimitForMeterUsage()
         {
+            // Arrange
             meterReadingService.StoreReadings(SMART_METER_ID, new List<ElectricityReading>() {
                 new ElectricityReading() { Time = DateTime.Now.AddMinutes(-30), Reading = 35m },
                 new ElectricityReading() { Time = DateTime.Now, Reading = 3m }
             });
 
-            object result = controller.RecommendCheapestPricePlans(SMART_METER_ID, null).Value;
+            // Act
+            var response = controller.RecommendCheapestPricePlans(SMART_METER_ID, null);
 
-            var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result).ToList();
+            // Assert
+            var result = Assert.IsAssignableFrom<OkObjectResult>(response);
+            var resultValue = result.Value as IEnumerable<KeyValuePair<string, decimal>>;
+            var recommendations = resultValue.ToList();
             var expected = new List<KeyValuePair<string, decimal>>() {
                 new(PRICE_PLAN_2_ID, 38m),
                 new(PRICE_PLAN_3_ID, 76m),
@@ -85,9 +97,9 @@ namespace JOIEnergy.Tests
                 new ElectricityReading() { Time = DateTime.Now, Reading = 20m }
             });
 
-            object result = controller.RecommendCheapestPricePlans(SMART_METER_ID, 2).Value;
-
-            var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result).ToList();
+            var response = controller.RecommendCheapestPricePlans(SMART_METER_ID, 2);
+            var result = Assert.IsAssignableFrom<OkObjectResult>(response);
+            var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result.Value).ToList();
             var expected = new List<KeyValuePair<string, decimal>>() {
                 new(PRICE_PLAN_2_ID, 16.667m),
                 new(PRICE_PLAN_3_ID, 33.333m),
@@ -98,26 +110,36 @@ namespace JOIEnergy.Tests
         [Fact]
         public void ShouldRecommendCheapestPricePlansMoreThanLimitAvailableForMeterUsage()
         {
+           // Arrange
             meterReadingService.StoreReadings(SMART_METER_ID, new List<ElectricityReading>() {
                 new ElectricityReading() { Time = DateTime.Now.AddMinutes(-60), Reading = 25m },
                 new ElectricityReading() { Time = DateTime.Now, Reading = 3m }
             });
 
-            object result = controller.RecommendCheapestPricePlans(SMART_METER_ID, 5).Value;
-
-            var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result).ToList();
             var expected = new List<KeyValuePair<string, decimal>>() {
                 new(PRICE_PLAN_2_ID, 14m),
                 new(PRICE_PLAN_3_ID, 28m),
                 new(PRICE_PLAN_1_ID, 140m),
             };
+
+            // Act
+            var response = controller.RecommendCheapestPricePlans(SMART_METER_ID, 5);
+
+
+            // Assert
+            var result = Assert.IsAssignableFrom<OkObjectResult>(response);
+            var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result.Value).ToList();
+
             Assert.Equal(expected, recommendations);
         }
 
         [Fact]
         public void GivenNoMatchingMeterIdShouldReturnNotFound()
         {
-            Assert.Equal(404, controller.CalculatedCostForEachPricePlan("not-found").StatusCode);
+            var response = controller.CalculatedCostForEachPricePlan("not-found");
+
+            var result = Assert.IsAssignableFrom<NotFoundObjectResult>(response);
+            Assert.Equal(404, result.StatusCode);
         }
 
         private static List<PeakTimeMultiplier> NoMultipliers()
