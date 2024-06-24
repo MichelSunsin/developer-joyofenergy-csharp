@@ -37,17 +37,18 @@ namespace JOIEnergy.Services
             var average = calculateAverageReading(electricityReadings);
             var timeElapsed = calculateTimeElapsed(electricityReadings);
             var averagedCost = average/timeElapsed;
-            return Math.Round(averagedCost * pricePlan.UnitRate, 3);
+            return Math.Round(averagedCost * pricePlan.UnitRate, 2);
         }
 
         public Dictionary<string, decimal> GetConsumptionCostOfElectricityReadingsForEachPricePlan(string smartMeterId)
         {
             List<ElectricityReading> electricityReadings = _meterReadingService.GetReadings(smartMeterId);
 
-            if (!electricityReadings.Any())
+            if (electricityReadings.Count == 0)
             {
                 return new Dictionary<string, decimal>();
             }
+
             return _pricePlans.ToDictionary(plan => plan.PlanName, plan => calculateCost(electricityReadings, plan));
         }
     }

@@ -1,13 +1,10 @@
 ﻿using JOIEnergy.Controllers;
 using JOIEnergy.Domain;
-using JOIEnergy.Enums;
 using JOIEnergy.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
-using Newtonsoft.Json.Linq;
-using System.Collections;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JOIEnergy.Tests
@@ -101,8 +98,8 @@ namespace JOIEnergy.Tests
             var result = Assert.IsAssignableFrom<OkObjectResult>(response);
             var recommendations = ((IEnumerable<KeyValuePair<string, decimal>>)result.Value).ToList();
             var expected = new List<KeyValuePair<string, decimal>>() {
-                new(PRICE_PLAN_2_ID, 16.667m),
-                new(PRICE_PLAN_3_ID, 33.333m),
+                new(PRICE_PLAN_2_ID, 16.67m),
+                new(PRICE_PLAN_3_ID, 33.33m),
             };
             Assert.Equal(expected, recommendations);
         }
